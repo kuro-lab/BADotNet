@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Xml.Serialization;
 
@@ -493,24 +494,32 @@ class Application
             RedirectStandardError = true,
         };
 
-        var process = Process.Start(pInfo);
-        if (process == null)
+        try
         {
-            return false;
-        }
+            var process = Process.Start(pInfo);
+            if (process == null)
+            {
+                return false;
+            }
 
-        process.WaitForExit();
-        var output = process.StandardOutput.ReadToEnd();
-        if (output.Length > 1)
-        {
-            Console.WriteLine(output);
-            return false;
-        }
+            process.WaitForExit();
+            var output = process.StandardOutput.ReadToEnd();
+            if (output.Length > 1)
+            {
+                Console.WriteLine(output);
+                return false;
+            }
 
-        var error = process.StandardError.ReadToEnd();
-        if (error.Length > 1)
+            var error = process.StandardError.ReadToEnd();
+            if (error.Length > 1)
+            {
+                Console.WriteLine(error);
+                return false;
+            }
+        }
+        catch (Win32Exception)
         {
-            Console.WriteLine(error);
+            PutError("The command \"gcc\" disabled.");
             return false;
         }
 
