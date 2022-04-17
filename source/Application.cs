@@ -385,6 +385,41 @@ class Application
             return "e_Source file not found.";
         }
 
+        // outディレクトリをクリア 無ければ作る
+        DirectoryInfo outdir = Directory.CreateDirectory("out");
+        FileInfo[] files = outdir.GetFiles();
+        foreach (FileInfo file in files)
+        {
+            if (file.FullName.EndsWith(".csv"))
+            {
+                file.Delete();
+            }
+        }
+
+        // 出力ファイル準備
+        var periods = new HashSet<int>(Config.Period);
+        foreach (int pd in periods)
+        {
+            using (var sw = new StreamWriter($"out/{(Config.Mu == -1 ? "I" : "G")}{pd}.csv", false))
+            {
+                sw.Write("t,");
+                for (int d = 1; d <= Config.Dimension[0]; d++)
+                {
+                    sw.Write($"l{d},");
+                }
+                for (int d = 1; d <= Config.Dimension[1]; d++)
+                {
+                    sw.Write($"x{d},");
+                }
+                sw.WriteLine("Fbif");
+            }
+
+            using (var sw = new StreamWriter($"out/timeSpan_{(Config.Mu == -1 ? "I" : "G")}{pd}.csv", false))
+            {
+                sw.WriteLine("suc,time,[s],tbif");
+            }
+        }
+
         LinearAxis xAxis = LinearAxis.init<IConvertible, IConvertible, IConvertible, IConvertible, IConvertible, IConvertible>(
             Title: Title.init("&#955;<sub>1</sub>"),
             ZeroLineColor: Color.fromString("#ffff"),
@@ -413,29 +448,33 @@ class Application
         // var layout = Layout.init<IConvertible>(PlotBGColor: Color.fromString("#e5ecf6"));
 
         var startTime = DateTime.Now;
-
+        int prev = -1;
         foreach (int pd in Config.Period)
         {
-            // generate .h
-            try
+            if (pd != prev)
             {
-                Config.GenerateHeader(pd);
-            }
-            catch (ArgumentException)
-            {
-                return "e_Exception occured. csources/config.h is not writable.";
-            }
+                prev = pd;
+                // generate .h
+                try
+                {
+                    Config.GenerateHeader(pd);
+                }
+                catch (ArgumentException)
+                {
+                    return "e_Exception occured. csources/config.h is not writable.";
+                }
 
-            PutVerified("The header file was generated.");
+                PutVerified("The header file was generated.");
 
-            // compile
-            if (!Compile(destin))
-            {
-                return "e_Compilation failed.";
+                // compile
+                if (!Compile(destin))
+                {
+                    return "e_Compilation failed.";
+                }
+
+                PutVerified("Compilation process successfully completed.");
+                Console.WriteLine("Start NLPSO....");
             }
-
-            PutVerified("Compilation process successfully completed.");
-            Console.WriteLine("Start NLPSO....");
 
             // execute
             // todo: 失敗した場合の処理
@@ -520,7 +559,7 @@ class Application
 
     private bool Execute(int pd)
     {
-        Directory.CreateDirectory("out");
+        // Directory.CreateDirectory("out");
         var pInfo = new ProcessStartInfo()
         {
             FileName = "a.exe",

@@ -6,13 +6,9 @@
 #define CG 1.49445
 
 #ifndef _OPENMP
-int omp_get_thread_num(){
-    return 0;
-}
+int omp_get_thread_num() { return 0; }
 
-void omp_set_num_threads(int n){
-    return;
-}
+void omp_set_num_threads(int n) { return; }
 #endif
 
 extern const double LMAX[];
@@ -51,18 +47,18 @@ void write_stream(int fileIdx, char *str, bool append) {
     return;
 }
 
-double f_pp(double* x){
+double f_pp(double *x) {
     int threadIdx = omp_get_thread_num();
-    for(int d=0; d<Dpp; d++){
+    for (int d = 0; d < Dpp; d++) {
         zpp[threadIdx][d] = x[d];
     }
 
     double xk[Dpp];
-    for(int d=0; d<Dpp; d++){
+    for (int d = 0; d < Dpp; d++) {
         xk[d] = x[d];
     }
 
-    for(int k=0; k<PERIOD; k++){
+    for (int k = 0; k < PERIOD; k++) {
         next_x(xk, zbif[threadIdx]);
     }
 
@@ -143,7 +139,10 @@ double determinant(double a[Dpp][Dpp]) {
     return det;
 }
 
-double particle_swarm_optimize(int dim, int population, int tmax, double (*f)(double*), double criterion, const double* min, const double* max, int* out_t){
+double particle_swarm_optimize(int dim, int population, int tmax,
+                               double (*f)(double *), double criterion,
+                               const double *min, const double *max,
+                               int *out_t) {
     double z[population][dim];
     double v[population][dim];
     double err[population];
@@ -165,37 +164,37 @@ double particle_swarm_optimize(int dim, int population, int tmax, double (*f)(do
     }
 
     // main loop
-    for(int t=0; t<tmax; t++){
-        for(int i=0; i<population; i++){
+    for (int t = 0; t < tmax; t++) {
+        for (int i = 0; i < population; i++) {
             err[i] = f(z[i]);
 
             // update pbest
-            if(err[i] < pberr[i]){
-                for(int d=0; d<dim; d++){
+            if (err[i] < pberr[i]) {
+                for (int d = 0; d < dim; d++) {
                     pbest[i][d] = z[i][d];
                 }
                 pberr[i] = err[i];
             }
 
             // update gbest
-            if(err[i] < gberr){
-                for(int d=0; d<dim; d++){
+            if (err[i] < gberr) {
+                for (int d = 0; d < dim; d++) {
                     gbest[d] = z[i][d];
                 }
                 gberr = err[i];
             }
 
             // judgement
-            if(gberr < criterion){
+            if (gberr < criterion) {
                 *out_t = t;
-                for(int d=0; d<Dbif; d++){
+                for (int d = 0; d < Dbif; d++) {
                     zbif[threadIdx][d] = z[i][d];
                 }
                 return gberr;
             }
         }
 
-        for(int i=0; i<population; i++){
+        for (int i = 0; i < population; i++) {
             for (int d = 0; d < dim; d++) {
                 double r1 = rand_next_double(&gen[threadIdx], 0.0, CP);
                 double r2 = rand_next_double(&gen[threadIdx], 0.0, CG);
@@ -212,19 +211,20 @@ double particle_swarm_optimize(int dim, int population, int tmax, double (*f)(do
         }
     }
 
-    *out_t =  -1;
+    *out_t = -1;
 }
 
-double f_bif(double* l){
+double f_bif(double *l) {
     int threadIdx = omp_get_thread_num();
-    for(int d=0; d<Dbif; d++){
+    for (int d = 0; d < Dbif; d++) {
         zbif[threadIdx][d] = l[d];
     }
 
     int tpp = -1;
-    double pperr = particle_swarm_optimize(Dpp, Mpp, Tpp, f_pp, Cpp, XMIN, XMAX, &tpp);
+    double pperr =
+        particle_swarm_optimize(Dpp, Mpp, Tpp, f_pp, Cpp, XMIN, XMAX, &tpp);
 
-    if(tpp < 0){
+    if (tpp < 0) {
         return pperr / Cpp / Cpp;
     }
 
@@ -279,26 +279,26 @@ double f_bif(double* l){
     return d > 0 ? d : -d;
 }
 
-int main(){
+int main() {
     rand_seed((unsigned int)time(NULL));
     omp_set_num_threads(PARALLELISM);
 
-    char str0[200];
-    sprintf(str0, "t,");
-    for (int i = 1; i <= Dbif; i++) {
-        char s[10];
-        sprintf(s, "l%d,", i);
-        strcat(str0, s);
-    }
-    for (int i = 1; i <= Dpp; i++) {
-        char s[10];
-        sprintf(s, "x%d,", i);
-        strcat(str0, s);
-    }
-    strcat(str0, "Fbif\n");
-    write_stream(0, str0, false);
+    // char str0[200];
+    // sprintf(str0, "t,");
+    // for (int i = 1; i <= Dbif; i++) {
+    //     char s[10];
+    //     sprintf(s, "l%d,", i);
+    //     strcat(str0, s);
+    // }
+    // for (int i = 1; i <= Dpp; i++) {
+    //     char s[10];
+    //     sprintf(s, "x%d,", i);
+    //     strcat(str0, s);
+    // }
+    // strcat(str0, "Fbif\n");
+    // write_stream(0, str0, false);
 
-    // char str1[] = "trial,suc,time,[s],tbif\n";
+    // char str1[] = "suc,time,[s],tbif\n";
     // write_stream(1, str1, false);
 
     double bif[N][Dbif];
@@ -307,16 +307,17 @@ int main(){
     double err[N];
 
     double t0 = get_realtime();
-    #pragma omp parallel for
-    for(int k=0; k<N; k++){
+#pragma omp parallel for
+    for (int k = 0; k < N; k++) {
         int threadIdx = omp_get_thread_num();
 
-        err[k] = particle_swarm_optimize(Dbif, Mbif, Tbif, f_bif, Cbif, LMIN, LMAX, &tend[k]);
+        err[k] = particle_swarm_optimize(Dbif, Mbif, Tbif, f_bif, Cbif, LMIN,
+                                         LMAX, &tend[k]);
 
-        for(int d=0; d<Dbif; d++){
+        for (int d = 0; d < Dbif; d++) {
             bif[k][d] = zbif[threadIdx][d];
         }
-        for(int d=0; d<Dpp; d++){
+        for (int d = 0; d < Dpp; d++) {
             pp[k][d] = zpp[threadIdx][d];
         }
 
@@ -325,7 +326,8 @@ int main(){
     double t1 = get_realtime();
 
     int suc = 0;
-    for(int k=0; k<N; k++){
+    int tbif = 0;
+    for (int k = 0; k < N; k++) {
         char str_result[1000];
         sprintf(str_result, "%d,", tend[k]);
         for (int d = 0; d < Dbif; d++) {
@@ -344,11 +346,23 @@ int main(){
         write_stream(0, str_result, true);
 
         // suc
-        if(tend[k] >= 0) suc++;
+        if (tend[k] >= 0) {
+            tbif += tend[k];
+            suc++;
+        }
     }
 
+    char *elapsedTotal = NULL;
+    elapsedTotal = elapsed_span(t1 - t0);
+
     printf("\n");
-    printf("%.2fs elapsed.  ", t1 - t0);
-    printf("suc: %.2f%%", suc / (double)N * 100);
+    printf("%s elapsed.  ", elapsedTotal);
+    printf("suc: %.2f%%\n", suc / (double)N * 100);
+    printf("mean t_end: %.2f\n", tbif / (double)suc);
+
+    char str_timespan[256];
+    sprintf(str_timespan, "%.2f%%,%s,%.3f,%.3f\n", suc / (double)N * 100,
+            elapsedTotal, t1 - t0, tbif / (double)suc);
+    write_stream(1, str_timespan, true);
     return 0;
 }
