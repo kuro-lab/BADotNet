@@ -4,3 +4,5 @@
 /out
 target.c
 config.h
+*.xml
+*.exe
