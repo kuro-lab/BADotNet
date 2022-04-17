@@ -482,11 +482,13 @@ class Application
 
             // scatter
             string mu = Config.Mu == -1 ? "I" : "G";
-            var csv = CsvFile.Load(Environment.CurrentDirectory + $"/out/{mu}{pd}.csv");
-            IEnumerable<string> GetData(string column) => csv.Rows.Select(row => row.GetColumn(column));
-            var x = GetData("l1").Select(double.Parse).ToArray();
-            var y = GetData("l2").Select(double.Parse).ToArray();
-            scatterList.Add(Chart2D.Chart.Scatter<double, double, string>(x, y, StyleParam.Mode.Markers, Name: $"{mu}{pd}").WithLayout(layout).WithMarkerStyle(Size: 3));
+            using (var csv = CsvFile.Load(Environment.CurrentDirectory + $"/out/{mu}{pd}.csv"))
+            {
+                IEnumerable<string> GetData(string column) => csv.Rows.Select(row => row.GetColumn(column));
+                var x = GetData("l1").Select(double.Parse).ToArray();
+                var y = GetData("l2").Select(double.Parse).ToArray();
+                scatterList.Add(Chart2D.Chart.Scatter<double, double, string>(x, y, StyleParam.Mode.Markers, Name: $"{mu}{pd}").WithLayout(layout).WithMarkerStyle(Size: 3));
+            }
         }
 
         var chart = Chart.Combine(scatterList);
