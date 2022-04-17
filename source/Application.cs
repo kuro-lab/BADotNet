@@ -35,8 +35,9 @@ class Application
         {
             using (var sr = new StreamReader(stream))
             {
-                Config = (NlpsoConfig)serializer.Deserialize(sr);
-                if (Config == null) throw new ArgumentNullException();
+                var c = serializer.Deserialize(sr);
+                Config = (NlpsoConfig)(c ?? new NlpsoConfig());
+                if (c == null) throw new ArgumentNullException();
             }
         }
         catch (ArgumentNullException)
