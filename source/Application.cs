@@ -473,13 +473,19 @@ class Application
                 }
 
                 PutVerified("Compilation process successfully completed.");
-                Console.WriteLine("Start NLPSO....");
             }
 
             // execute
             // todo: 失敗した場合の処理
+            Console.WriteLine("Start NLPSO....");
             Execute(pd);
+        }
 
+        PutVerified("Search process finished.");
+        Console.WriteLine("Start to generate diagrams...");
+
+        foreach (int pd in periods)
+        {
             // scatter
             string mu = Config.Mu == -1 ? "I" : "G";
             using (var csv = CsvFile.Load(Environment.CurrentDirectory + $"/out/{mu}{pd}.csv"))
@@ -505,7 +511,7 @@ class Application
             }
         }
 
-        return "";
+        return "done.";
     }
 
     private bool Compile(string sourcePath)
