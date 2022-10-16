@@ -1,11 +1,14 @@
 #include "common.h"
 #include "config.h"
 
+#define MAX_NUM_THREADS 300
+
 typedef unsigned long long uint64;
 
-rand_t gen[PARALLELISM];
+rand_t gen[MAX_NUM_THREADS];
 
-uint64 rand_next(rand_t *x) {
+uint64 rand_next(rand_t *x)
+{
     uint64 a = *x;
     uint64 b = 4294967296UL - a;
     uint64 c = a * b;
@@ -16,20 +19,24 @@ uint64 rand_next(rand_t *x) {
     return *x ^ l;
 }
 
-double rand_next_double(rand_t *gen, double min, double max) {
+double rand_next_double(rand_t *gen, double min, double max)
+{
     double r = (double)rand_next(gen);
     return r * (max - min) / 0xffffffff + min;
 }
 
-void rand_init(rand_t *gen) {
+void rand_init(rand_t *gen)
+{
     *gen = RAND_MAX - rand() + 1;
     rand_next(&(*gen));
 }
 
-void rand_seed(unsigned int seed){
+void rand_seed(unsigned int seed)
+{
     srand(seed);
 
-    for(int i=0; i<PARALLELISM; i++){
+    for (int i = 0; i < MAX_NUM_THREADS; i++)
+    {
         rand_init(&gen[i]);
     }
 }

@@ -262,11 +262,17 @@ class Application
                 return "";
 
             case "mu":
-                if (!input[2].IsAnyOf("1", "-1"))
+                ls = new List<int>();
+                for (int i = 2; i < input.Length; i++)
                 {
-                    return "e_The characteristic multiplier must be 1 or -1.";
+                    if (!input[i].IsAnyOf("1", "-1"))
+                    {
+                        return "e_The characteristic multiplier must be 1 or -1.";
+                    }
+
+                    ls.Add(int.Parse(input[i]));
                 }
-                Config.Mu = int.Parse(input[2]);
+                Config.Mu = new List<int>(ls);
                 return "";
 
             case "mbif":
@@ -318,19 +324,17 @@ class Application
                 return "";
 
             case "openmp":
-                if (!int.TryParse(input[2], out int omp))
+                ls = new List<int>();
+                for (int i = 2; i < input.Length; i++)
                 {
-                    return "e_The number of threads must be integer.";
-                }
+                    if (!int.TryParse(input[i], out int omp))
+                    {
+                        return "e_The number of threads must be integer.";
+                    }
 
-                if (omp < 2)
-                {
-                    Config.OpenMP = false;
-                    return "";
+                    ls.Add(int.Parse(input[i]));
                 }
-
-                Config.OpenMP = true;
-                Config.Parallelism = omp;
+                Config.Parallelism = new List<int>(ls);
                 return "";
 
             default:
@@ -398,116 +402,142 @@ class Application
 
         // 出力ファイル準備
         var periods = new HashSet<int>(Config.Period);
-        foreach (int pd in periods)
+        Console.WriteLine(string.Join(", ", Config.Parallelism));
+        foreach (int paral in Config.Parallelism)
         {
-            using (var sw = new StreamWriter($"out/{(Config.Mu == -1 ? "I" : "G")}{pd}.csv", false))
+            outdir = Directory.CreateDirectory($"out/{paral}");
+            files = outdir.GetFiles();
+            foreach (FileInfo file in files)
             {
-                sw.Write("t,");
-                for (int d = 1; d <= Config.Dimension[0]; d++)
-                {
-                    sw.Write($"l{d},");
-                }
-                for (int d = 1; d <= Config.Dimension[1]; d++)
-                {
-                    sw.Write($"x{d},");
-                }
-                sw.WriteLine("Fbif");
+                // if (file.FullName.EndsWith(".csv"))
+                // {
+                file.Delete();
+                // }
             }
 
-            using (var sw = new StreamWriter($"out/timeSpan_{(Config.Mu == -1 ? "I" : "G")}{pd}.csv", false))
+            Config.OpenMP = paral > 1;
+            File.Copy($"{Config.Target}.xml", $"out/{paral}/{Config.Target}.xml");
+
+            foreach (int mu in Config.Mu)
             {
-                sw.WriteLine("suc,time,[s],tbif");
-            }
-        }
-
-        LinearAxis xAxis = LinearAxis.init<IConvertible, IConvertible, IConvertible, IConvertible, IConvertible, IConvertible>(
-            Title: Title.init("&#955;<sub>1</sub>"),
-            ZeroLineColor: Color.fromString("#ffff"),
-            ZeroLineWidth: 2,
-            GridColor: Color.fromString("#ffff"),
-            Range: StyleParam.Range.ofMinMax(Config.ParamLowerBound[0], Config.ParamUpperBound[0])
-        );
-
-        LinearAxis yAxis = LinearAxis.init<IConvertible, IConvertible, IConvertible, IConvertible, IConvertible, IConvertible>(
-            Title: Title.init("&#955;<sub>2</sub>"),
-            ZeroLineColor: Color.fromString("#ffff"),
-            ZeroLineWidth: 2,
-            GridColor: Color.fromString("#ffff"),
-            Range: StyleParam.Range.ofMinMax(Config.ParamLowerBound[1], Config.ParamUpperBound[1])
-        );
-
-
-        Layout layout = new Layout();
-        layout.SetValue("title", Config.Target);
-        layout.SetValue("xaxis", xAxis);
-        layout.SetValue("yaxis", yAxis);
-        layout.SetValue("showlegend", true);
-
-        var scatterList = new List<GenericChart.GenericChart>();
-
-        // var layout = Layout.init<IConvertible>(PlotBGColor: Color.fromString("#e5ecf6"));
-
-        var startTime = DateTime.Now;
-        int prev = -1;
-        foreach (int pd in Config.Period)
-        {
-            if (pd != prev)
-            {
-                prev = pd;
-                // generate .h
-                try
+                foreach (int pd in periods)
                 {
-                    Config.GenerateHeader(pd);
-                }
-                catch (ArgumentException)
-                {
-                    return "e_Exception occured. csources/config.h is not writable.";
-                }
+                    using (var sw = new StreamWriter($"out/{paral}/{(mu == -1 ? "I" : "G")}{pd}.csv", false))
+                    {
+                        sw.Write("t,");
+                        for (int d = 1; d <= Config.Dimension[0]; d++)
+                        {
+                            sw.Write($"l{d},");
+                        }
+                        for (int d = 1; d <= Config.Dimension[1]; d++)
+                        {
+                            sw.Write($"x{d},");
+                        }
+                        sw.WriteLine("Fbif");
+                    }
 
-                PutVerified("The header file was generated.");
-
-                // compile
-                if (!Compile(destin))
-                {
-                    return "e_Compilation failed.";
+                    using (var sw = new StreamWriter($"out/{paral}/timeSpan_{(mu == -1 ? "I" : "G")}{pd}.csv", false))
+                    {
+                        sw.WriteLine("suc,time,[s],tbif");
+                    }
                 }
-
-                PutVerified("Compilation process successfully completed.");
             }
 
-            // execute
-            // todo: 失敗した場合の処理
-            Console.WriteLine("Start NLPSO....");
-            Execute(pd);
-        }
+            LinearAxis xAxis = LinearAxis.init<IConvertible, IConvertible, IConvertible, IConvertible, IConvertible, IConvertible>(
+                Title: Title.init("&#955;<sub>1</sub>"),
+                ZeroLineColor: Color.fromString("#ffff"),
+                ZeroLineWidth: 2,
+                GridColor: Color.fromString("#ffff"),
+                Range: StyleParam.Range.ofMinMax(Config.ParamLowerBound[0], Config.ParamUpperBound[0])
+            );
 
-        PutVerified("Search process finished.");
-        Console.WriteLine("Start to generate diagrams...");
+            LinearAxis yAxis = LinearAxis.init<IConvertible, IConvertible, IConvertible, IConvertible, IConvertible, IConvertible>(
+                Title: Title.init("&#955;<sub>2</sub>"),
+                ZeroLineColor: Color.fromString("#ffff"),
+                ZeroLineWidth: 2,
+                GridColor: Color.fromString("#ffff"),
+                Range: StyleParam.Range.ofMinMax(Config.ParamLowerBound[1], Config.ParamUpperBound[1])
+            );
 
-        foreach (int pd in periods)
-        {
-            // scatter
-            string mu = Config.Mu == -1 ? "I" : "G";
-            using (var csv = CsvFile.Load(Environment.CurrentDirectory + $"/out/{mu}{pd}.csv"))
+
+            Layout layout = new Layout();
+            layout.SetValue("title", Config.Target);
+            layout.SetValue("xaxis", xAxis);
+            layout.SetValue("yaxis", yAxis);
+            layout.SetValue("showlegend", true);
+
+            var scatterList = new List<GenericChart.GenericChart>();
+
+            // var layout = Layout.init<IConvertible>(PlotBGColor: Color.fromString("#e5ecf6"));
+
+            var startTime = DateTime.Now;
+            foreach (int mu in Config.Mu)
             {
-                IEnumerable<string> GetData(string column) => csv.Rows.Select(row => row.GetColumn(column));
-                var x = GetData("l1").Select(double.Parse).ToArray();
-                var y = GetData("l2").Select(double.Parse).ToArray();
-                scatterList.Add(Chart2D.Chart.Scatter<double, double, string>(x, y, StyleParam.Mode.Markers, Name: $"{mu}{pd}").WithLayout(layout).WithMarkerStyle(Size: 3));
+                int prev = -1;
+                foreach (int pd in Config.Period)
+                {
+                    if (pd != prev)
+                    {
+                        prev = pd;
+                        // generate .h
+                        try
+                        {
+                            Config.GenerateHeader(pd, mu, paral);
+                        }
+                        catch (ArgumentException)
+                        {
+                            return "e_Exception occured. csources/config.h is not writable.";
+                        }
+
+                        PutVerified("The header file was generated.");
+
+                        // compile
+                        if (!Compile(destin))
+                        {
+                            return "e_Compilation failed.";
+                        }
+
+                        PutVerified("Compilation process successfully completed.");
+                    }
+
+                    // execute
+                    // todo: 失敗した場合の処理
+                    Console.WriteLine("Start NLPSO....");
+                    Execute(pd);
+                }
             }
-        }
 
-        var chart = Chart.Combine(scatterList);
+            PutVerified("Search process finished.");
+            Console.WriteLine("Start to generate diagrams...");
 
-        try
-        {
-            chart.SaveHtml("out/fig.html", true);
-        }
-        catch
-        {
-            if (File.Exists("out/fig.html") && File.GetLastWriteTime("out/fig.html").CompareTo(startTime) > 0)
+            foreach (int mu in Config.Mu)
             {
-                return "w_No valid browser found. Failed to open out/fig.html .";
+                foreach (int pd in periods)
+                {
+                    // scatter
+                    string muChar = mu == -1 ? "I" : "G";
+                    using (var csv = CsvFile.Load(Environment.CurrentDirectory + $"/out/{paral}/{muChar}{pd}.csv"))
+                    {
+                        IEnumerable<string> GetData(string column) => csv.Rows.Select(row => row.GetColumn(column));
+                        var x = GetData("l1").Select(double.Parse).ToArray();
+                        var y = GetData("l2").Select(double.Parse).ToArray();
+                        scatterList.Add(Chart2D.Chart.Scatter<double, double, string>(x, y, StyleParam.Mode.Markers, Name: $"{muChar}{pd}").WithLayout(layout).WithMarkerStyle(Size: 3));
+                    }
+                }
+            }
+
+            var chart = Chart.Combine(scatterList);
+
+            try
+            {
+                chart.SaveHtml($"out/{paral}/fig.html", true);
+            }
+            catch
+            {
+                if (File.Exists($"out/{paral}/fig.html") && File.GetLastWriteTime($"out/{paral}/fig.html").CompareTo(startTime) > 0)
+                {
+                    return $"w_No valid browser found. Failed to open out/{paral}/fig.html .";
+                }
             }
         }
 
@@ -540,6 +570,8 @@ class Application
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
+        Console.WriteLine($"{pInfo.FileName} {pInfo.Arguments}");
+        Console.WriteLine($"start: {DateTime.Now}");
 
         var process = Process.Start(pInfo);
         if (process == null)
@@ -572,14 +604,21 @@ class Application
         {
             FileName = "a.exe",
             Arguments = "",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
+            UseShellExecute = true,
+            // RedirectStandardOutput = true,
+            // RedirectStandardError = true,
         };
 
         // int suc = 0;
         // int fail = 0;
 
+        var process = new Process();
+        process.StartInfo = pInfo;
+        process.Start();
+        process.WaitForExit();
+        return true;
+
+        /*
         using (var process = new Process())
         using (var ctoken = new CancellationTokenSource())
         {
@@ -624,6 +663,7 @@ class Application
             }
             return false;
         }
+        */
     }
 
     public static void Put(string message)

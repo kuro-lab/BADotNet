@@ -2,7 +2,10 @@
 /bin
 /obj
 /out
+/ignore
 target.c
 config.h
 *.xml
 *.exe
+*.csv
+*.html
