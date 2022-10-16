@@ -6,12 +6,12 @@ public class NlpsoConfig
     public string Target { get; set; } = "";
     public int NumTrial { get; set; } = 100;
     public List<int> Period { get; set; } = new();
-    public int Mu { get; set; } = -1;
+    public List<int> Mu { get; set; } = new();
     public int[] Dimension { get; set; } = new int[] { 0, 0 };
-    public int[] Population { get; set; } = new int[] { 30, 20 };
-    public int[] Tmax { get; set; } = new int[] { 1000, 100 };
+    public int[] Population { get; set; } = new int[] { 30, 30 };
+    public int[] Tmax { get; set; } = new int[] { 600, 300 };
     public double[] Criterion { get; set; } = new double[] { 1e-3, 1e-10 };
-    public int Parallelism { get; set; } = 16;
+    public List<int> Parallelism { get; set; } = new();
     public bool OpenMP { get; set; } = true;
     public int OptLevel { get; set; } = 2;
     public string Source { get; set; } = "";
@@ -42,14 +42,14 @@ public class NlpsoConfig
         return;
     }
 
-    public void GenerateHeader(int pd)
+    public void GenerateHeader(int pd, int mu, int para)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"#pragma once");
-        sb.AppendLine($"#define PARALLELISM {Parallelism}");
+        sb.AppendLine($"#define PARALLELISM {para}");
         sb.AppendLine($"#define N {NumTrial}");
         sb.AppendLine($"#define PERIOD {pd}");
-        sb.AppendLine($"#define MU {Mu}");
+        sb.AppendLine($"#define MU {mu}");
         sb.AppendLine($"#define Dbif {Dimension[0]}");
         sb.AppendLine($"#define Dpp {Dimension[1]}");
         sb.AppendLine($"#define Mbif {Population[0]}");
@@ -73,11 +73,11 @@ public class NlpsoConfig
         sb.AppendLine($" Target     |  target     | {Target}");
         sb.AppendLine($" NumTrial   |  trial      | {NumTrial}");
         sb.AppendLine($" Period     |  period     | {string.Join(", ", Period)}");
-        sb.AppendLine($" Mu         |  mu         | {Mu}");
+        sb.AppendLine($" Mu         |  mu         | {string.Join(", ", Mu)}");
         sb.AppendLine($" Population | (mbif, mpp) | ({string.Join(", ", Population)})");
         sb.AppendLine($" Tmax       | (tbif, tpp) | ({string.Join(", ", Tmax)})");
         sb.AppendLine($" Criterion  | (cbif, cpp) | ({string.Join(", ", Criterion)})");
-        sb.AppendLine($" OpenMP     |  openmp     | {OpenMP} {(OpenMP ? $"(max_threads: {Parallelism})" : "")}");
+        sb.AppendLine($" OpenMP     |  openmp     | {string.Join(", ", Parallelism)}");
         return sb.ToString();
     }
 
@@ -88,7 +88,7 @@ public class NlpsoConfig
             "target" => $"\"{Target}\"",
             "period" => $"({string.Join(", ", Period)})",
             "trial" => $"{NumTrial}",
-            "mu" => $"{Mu}",
+            "mu" => $"{string.Join(", ", Mu)}",
             "population" => $"({string.Join(", ", Population)})",
             "mbif" => $"{Population[0]}",
             "mpp" => $"{Population[1]}",
@@ -98,7 +98,8 @@ public class NlpsoConfig
             "criterion" => $"({string.Join(", ", Criterion)})",
             "cbif" => $"{Criterion[0]}",
             "cpp" => $"{Criterion[1]}",
-            "openmp" => $"{OpenMP} {(OpenMP ? $"(max_threads: {Parallelism})" : "")}",
+            // "openmp" => $"{OpenMP} {(OpenMP ? $"(max_threads: {Parallelism})" : "")}",
+            "openmp" => $"{string.Join(", ", Parallelism)}",
             _ => "e_Could not find the specified parameter."
         };
     }
